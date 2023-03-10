@@ -13,15 +13,15 @@ class Employee(models.Model):
 
 class Account(models.Model):
    number = models.IntegerField(max_length=10)
-   balance = models.DecimalField(max_length=10, decimal_places=2)
+   balance = models.DecimalField(max_digits=10, decimal_places=2)
    is_loan = models.BooleanField(default=False)
-   customer = models.ForeignKey(Customer)
+   customer = models.ForeignKey(Customer, on_delete=(models.DO_NOTHING))
    # use a trigger when customer is deleted to prevent invalid customer id
 
 class Transaction(models.Model):
    type = models.CharField(max_length=255)
-   amount = models.DecimalField(max_length=10, decimal_places=2)
+   amount = models.DecimalField(max_digits=10, decimal_places=2)
    description = models.CharField(max_length=255)
    date = models.DateTimeField(datetime.now)
-   account = models.ForeignKey(Account)
+   account = models.ForeignKey(Account, on_delete=(models.DO_NOTHING))
    # use a trigger when account is deleted to prevent invalid account id
