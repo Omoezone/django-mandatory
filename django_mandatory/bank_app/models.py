@@ -91,3 +91,4 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f'{self.amount} : {self.uid} : {self.date} : {self.account} : {self.transaction_type} : {self.description}'
+
