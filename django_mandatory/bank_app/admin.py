@@ -1,9 +1,8 @@
 from django.contrib import admin
-from .models import Customer, Transaction, Account, Employee
+from .models import UID, Customer, Account, Transaction, Rank
 
-# Register your models here.
-
+admin.site.register(UID)
 admin.site.register(Customer)
-admin.site.register(Transaction)
 admin.site.register(Account)
-admin.site.register(Employee)
+admin.site.register(Transaction)
+admin.site.register(Rank)
