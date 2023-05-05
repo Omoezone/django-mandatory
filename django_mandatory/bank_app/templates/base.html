@@ -22,8 +22,8 @@
             <li><strong>Kea Bank</strong></li>
           </ul>
           <ul>
-            <li><a href="#">Link</a></li>
-            <li><a href="#">Link</a></li>
+            <li><a href="#">My Account</a></li>
+            <li><a href="#">Transaction</a></li>
             <li><a href="#" role="button">Button</a></li>
             {% if user.is_superuser %}
             <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
@@ -43,7 +43,7 @@
     {% endblock main %}
     </main>
 
-    <footer  class="container">
+    <footer class="container" style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 20px 30px ">
         <p>&copy; The Kea Bank App</p>
     </footer>
 </div>
