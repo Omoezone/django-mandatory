@@ -14,5 +14,5 @@ def index(request):
 
 @login_required
 def customer_dashboard(request):
-    return render(request, 'customer_customer_dashboard.html')
+    return render(request, 'customer_dashboard.html')
 
