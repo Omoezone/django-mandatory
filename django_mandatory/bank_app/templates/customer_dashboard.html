@@ -5,17 +5,21 @@
 
 
 <article>
-    <p>Welcome, {{ user.username }}</p>
+    <p>Welcome customer, {{ user.username }}</p>
     <h3>My accounts:</h3>
     <table>
         <tr>
-            <th>Account Number</th>
             <th>Account Name</th>
+            <th>Loan Status </th>
         </tr>
         {% for account in accounts %}
         <tr>
-            <td><a href="{% url 'account_details' account.pk %}">{{ account.pk }}</a></td>
-            <td>{{ account.name }}</td>
+            <td><a href="{% url 'bank_app:account_single' account.pk %}">{{ account.name }}</a></td>
+            
+            <td>{{ account.is_loan|yesno:"loan," }}</td>
+            
+            <td></td>
+            
         </tr>
         {% endfor %}
     </table>
