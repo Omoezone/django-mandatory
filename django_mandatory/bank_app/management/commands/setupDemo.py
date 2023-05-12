@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from django_mandatory.bank_app.models import Account, Transaction, Customer
+from bank_app.models import Account, Transaction
 
 
 class Command(BaseCommand):

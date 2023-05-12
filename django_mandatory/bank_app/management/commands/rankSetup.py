@@ -1,11 +1,12 @@
 from django.core.management.base import BaseCommand
-from django_mandatory.bank_app.models import Rank
+from bank_app.models import Rank
 
 
 class Command(BaseCommand):
     def handle(self, **options):
         print('Provisioning ...')
         if not Rank.objects.all():
+            Rank.objects.create(name='Diamond', value=100)
             Rank.objects.create(name='Platinum', value=90)
             Rank.objects.create(name='Gold', value=75)
             Rank.objects.create(name='Silver', value=50)

@@ -23,8 +23,10 @@
             </ul>
             {% if user.is_authenticated%}
               <ul>
+                {% if not user.is_staff %}
                 <li><a href="{% url 'bank_app:customer_account' %}">My Account</a></li>
                 <li><a href="{% url 'bank_app:make_transfer' %}">Make Transaction</a></li>
+                {% endif %}
                 {% if user.is_staff %}
                 <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
                   <li><a href="{% url 'bank_app:staff_new_customer' %}">Create New Customer</a></li>
