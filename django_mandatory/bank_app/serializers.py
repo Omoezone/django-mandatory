@@ -1,19 +1,16 @@
 from rest_framework import serializers
-from models import Rank
-from models import Account
-from models import Customer
-from models import Transaction
+from models import Rank, Account, Customer, Transaction
 
 
 class RankSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', '')
+        fields = ('id', 'name', 'value')
         model = Rank
 
 
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', '')
+        fields = ('id', 'name', 'is_loan', 'user', 'movements', 'balance')
         model = Account
 
 
@@ -25,5 +22,5 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', '')
+        fields = ('id', 'transaction_type', 'amount', 'description', 'date', 'account', 'uid')
         model = Transaction

@@ -1,13 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
-from models import Rank
-from models import Account
-from models import Customer
-from models import Transaction
-from models import RankSerializer
-from models import AccountSerializer
-from serializers import CustomerSerializer
-from serializers import TransactionSerializer
+from models import Rank, Account, Customer, Transaction
+from serializers import RankSerializer, AccountSerializer, CustomerSerializer, TransactionSerializer
 from permissions import IsOwnerOrNoAccess
 
 
