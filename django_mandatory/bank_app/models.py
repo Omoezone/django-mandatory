@@ -62,6 +62,19 @@ class Customer(models.Model):
     def default_account(self) -> Account:
         return Account.objects.filter(user=self.user).first()
 
+    def make_loan(self, amount, name):
+        assert self.can_make_loan, 'User rank does not allow for making loans.'
+        assert amount >= 0, 'Negative amount not allowed for loan.'
+        loan = Account.objects.create(user=self.user, name=f'Loan: {name}')
+        Transaction.transfer(
+            amount,
+            loan,
+            f'Loan paid out to account {self.default_account}',
+            self.default_account,
+            f'Credit from loan {loan.pk}: {loan.name}',
+            is_loan=True
+        )
+
     def __str__(self):
         return f'{self.full_name}'
 
@@ -71,21 +84,22 @@ class Transaction(models.Model):
     description = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now_add=True, db_index=True)
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
-    uid = models.ForeignKey(UID, on_delete=models.PROTECT)
+    transaction = models.ForeignKey(UID, on_delete=models.PROTECT)
 
     @classmethod
     def transfer(cls, amount, debit_account, debit_description, credit_account, credit_description,
                  is_loan=False) -> int:
         assert amount > 0, 'No negative amount allowed for transfer'
         with transaction.atomic():
-            if debit_account.balance > amount or is_loan:
+            if is_loan or debit_account.balance > amount:
+                print("started transactions")
                 uuid = UID.uid
-                cls(amount=-amount, uid=uuid, account=debit_account, description=debit_description)
-                cls(amount=amount, uid=uuid, account=credit_account, description=credit_description)
+                cls(amount=-amount, transaction=uuid, account=debit_account, description=debit_description).save()
+                cls(amount=amount, transaction=uuid, account=credit_account, description=credit_description).save()
             else:
                 raise TransferError
         return uuid
 
     def __str__(self):
-        return f'{self.amount} : {self.uid} : {self.date} : {self.account} : {self.description}'
+        return f'{self.amount} : {self.transaction} : {self.date} : {self.account} : {self.description}'
 

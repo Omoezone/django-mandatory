@@ -3,11 +3,11 @@
 {% block main %}
 
 {% if user.is_staff %}
-<p>Welcome, {{ user }}.</p>
+<p>Welcome, {{ user.username }}.</p>
 {% else %}
 <p>Welcome, {{ user.customer.full_name }}.</p>
 {% endif %}
-<p><Strong>Date Joined: </Strong>{user.date_joined}</p>
+<p><Strong>Date Joined: </Strong>{{user.date_joined}}</p>
 
 {% if user.is_staff %}
 <p><strong>This user is a staff</strong></p>
@@ -39,8 +39,8 @@
     <tr>
         <td><a href="{% url 'bank_app:transaction_details' movement.transaction %}">{{ movement.transaction }}</a></td>
         <td>{{ movement.amount|floatformat:"2" }}</td>
-        <td>{{ movement.timestamp }}</td>
-        <td>{{ movement.text }}</td>
+        <td>{{ movement.date }}</td>
+        <td>{{ movement.description }}</td>
     </tr>
     {% endfor %}
 </table>

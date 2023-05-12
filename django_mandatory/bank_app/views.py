@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
+from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, reverse
 from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm
 from django.contrib.auth.models import User
@@ -131,7 +132,7 @@ def staff_account_details(request, pk):
 
 @login_required
 def transaction_details(request, transaction):
-    movements = Transaction.objects.filter(uid=transaction)
+    movements = Transaction.objects.filter(transaction=transaction)
     if not request.user.is_staff:
         if not movements.filter(account__in=request.user.customer.accounts):
             raise PermissionDenied('Customer is not part of the transaction.')
@@ -188,4 +189,33 @@ def make_transfer(request):
             'form': form,
         }
     return render(request, 'bank/make_transfer.html', context)
+
+
+@login_required
+def transaction_details(request, transaction):
+    movements = Transaction.objects.filter(transaction=transaction)
+    if not request.user.is_staff:
+        if not movements.filter(account__in=request.user.customer.accounts):
+            raise PermissionDenied('Customer is not part of the transaction.')
+    context = {
+        'movements': movements,
+    }
+    return render(request, 'bank/transaction_details.html', context)
+
+
+@login_required
+def make_loan(request):
+    assert not request.user.is_staff, 'Staff user routing customer view.'
+
+    if not request.user.customer.can_make_loan:
+        context = {
+            'title': 'Create Loan Error',
+            'error': 'Loan could not be completed.'
+        }
+        return render(request, 'bank/error.html', context)
+    if request.method == 'POST':
+        request.user.customer.make_loan(Decimal(request.POST['amount']), request.POST['name'])
+        return HttpResponseRedirect(reverse('bank_app:customer_dashboard'))
+    return render(request, 'bank/make_loan.html', {})
+
 
