@@ -8,3 +8,6 @@ Vejledning og kommandoer i django:
 2. Migrate: "python manage.py makemigrations" efterfulgt af "python manage.py migrate"
 3. Lav en superuser til brug i fx admin portal: "python manage.py createsuperuser". 
 3.1. Email er ikke et must. 
+
+pip install -r requirements.txt
+pip freeze > requirements.txt

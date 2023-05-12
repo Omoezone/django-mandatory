@@ -1,6 +1,7 @@
 from django.urls import path, include
 from . import views
-from api import *
+from .api import RankList, RankDetail, AccountList, AccountDetail, CustomerList, CustomerDetail, \
+    TransactionList, TransactionDetail
 
 app_name = "bank_app"
 

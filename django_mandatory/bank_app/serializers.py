@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from models import Rank, Account, Customer, Transaction
+from .models import Rank, Account, Customer, Transaction
 
 
 class RankSerializer(serializers.ModelSerializer):
