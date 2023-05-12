@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block main %}
+
+
+
+<article>
+    {% if user.is_staff %}
+    <p><strong>Welcome staff-member, {{ user.username }}</strong></p>
+    {% else %}
+    <p><strong>Welcome, {{ user.username }}</strong></p>
+    {% endif %}
+    <h3>My accounts:</h3>
+    <table>
+        <tr>
+            <th>Account Number</th>
+            <th>Account Name</th>
+        </tr>
+        {% for account in accounts %}
+        <tr>
+            <td><a href="{% url 'bank_app:account_details' account.pk %}">{{ account.pk }}</a></td>
+            <td>{{ account.name }}</td>
+            <td>{{ account.is_loan|yesno:"loan," }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</article>
+{% if user.is_staff %}
+<article>
+    <form action="">
+            <input name="search_term" placeholder="Search on customer data" class="form-control" type="text"
+                hx-trigger="keyup changed delay:500ms" hx-target="#search-results" hx-indicator=".htmx-indicator" />
+            <button>Search</button>
+    </form>
+
+    <table>
+        <tr>
+            <th>Customer Username</th>
+            <th>Customer Full Name</th>
+            <th>Email</th>
+        </tr>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.first_name }} {{ user.last_name }}</td>
+            <td>{{ user.email }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</article>
+{% endif %}
+
+{% endblock main %}
