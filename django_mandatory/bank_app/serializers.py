@@ -4,23 +4,23 @@ from .models import Rank, Account, Customer, Transaction
 
 class RankSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'value')
         model = Rank
+        fields = ('id', 'name', 'value')
 
 
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'name', 'is_loan', 'user', 'movements', 'balance')
         model = Account
+        fields = ('id', 'name', 'is_loan', 'user', 'movements', 'balance')
 
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'user', 'phone', 'rank', 'full_name', 'can_make_loan', 'default_account')
         model = Customer
+        fields = ('id', 'user', 'phone', 'rank', 'full_name', 'can_make_loan', 'default_account')
 
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('id', 'transaction_type', 'amount', 'description', 'date', 'account', 'uid')
         model = Transaction
+        fields = ('id', 'transaction_type', 'amount', 'description', 'date', 'account', 'uid')
