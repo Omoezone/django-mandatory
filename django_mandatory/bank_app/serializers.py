@@ -17,7 +17,7 @@ class AccountSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ('id', 'user', 'phone', 'rank', 'full_name', 'can_make_loan', 'default_account')
+        fields = ('id', 'user', 'phone', 'rank', 'full_name', 'accounts', 'can_make_loan', 'default_account')
 
 
 class TransactionSerializer(serializers.ModelSerializer):
