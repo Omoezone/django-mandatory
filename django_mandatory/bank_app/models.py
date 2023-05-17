@@ -41,10 +41,20 @@ class Account(models.Model):
         return f'{self.name} : {self.user}'
 
 
+class Bank(models.Model):
+    name = models.CharField(max_length=100)
+    address = models.CharField(max_length=100)
+    phone = models.CharField(max_length=15)
+
+    def __str__(self):
+        return f'{self.name} : {self.address} : {self.phone}'
+
+
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.PROTECT)
     phone = models.CharField(max_length=15)
     rank = models.ForeignKey(Rank, default=1, on_delete=models.PROTECT)
+    bank = models.ForeignKey(Bank, on_delete=models.PROTECT())
 
     @property
     def full_name(self) -> str:
@@ -102,4 +112,3 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f'{self.amount} : {self.transaction} : {self.date} : {self.account} : {self.description}'
-
