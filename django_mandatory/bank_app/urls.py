@@ -22,15 +22,15 @@ urlpatterns = [
     path('staff_account_details/<int:pk>/', views.staff_account_details, name='staff_account_details'),
 
     path('rank/api/v1/', RankList.as_view()),
-    path('rank/api/v1/<int:pk>', RankDetail.as_view()),
+    path('rank/api/v1/<int:pk>/', RankDetail.as_view()),
     path('rank/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
     path('account/api/v1/', AccountList.as_view()),
-    path('account/api/v1/<int:pk>', AccountDetail.as_view()),
+    path('account/api/v1/<int:pk>/', AccountDetail.as_view()),
     path('account/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
     path('customer/api/v1/', CustomerList.as_view()),
     path('customer/api/v1/<int:pk>/', CustomerDetail.as_view()),
     path('customer/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
     path('transaction/api/v1/', TransactionList.as_view()),
-    path('transaction/api/v1/<int:pk>', TransactionDetail.as_view()),
+    path('transaction/api/v1/<int:pk>/', TransactionDetail.as_view()),
     path('transaction/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
 ]
