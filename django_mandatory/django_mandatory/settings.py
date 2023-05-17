@@ -96,8 +96,8 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        # 'bank_app.permissions.IsOwnerOrNoAccess',
-        # 'rest_framework.permissions.IsAuthenticated',
+         'bank_app.permissions.IsAdminOrOwner',
+         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',

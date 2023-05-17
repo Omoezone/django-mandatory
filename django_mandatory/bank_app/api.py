@@ -2,7 +2,7 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from .models import Rank, Account, Customer, Transaction
 from .serializers import RankSerializer, AccountSerializer, CustomerSerializer, TransactionSerializer
-from .permissions import IsOwnerOrNoAccess
+from .permissions import IsAdminOrOwner
 
 
 class RankList(generics.ListCreateAPIView):
