@@ -15,3 +15,6 @@ Hvis dette er første gang, du kører programmet, gør dette:
 7. Som det første, gå ind i admin portal og lav en customer til den superuser du lige har lavet.
 
 Du bør nu have adgang til funktionelt service.
+
+pip install -r requirements.txt
+pip freeze > requirements.txt
