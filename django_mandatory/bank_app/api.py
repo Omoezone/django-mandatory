@@ -1,8 +1,26 @@
+from django.contrib.auth.models import User
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from .models import Rank, Account, Customer, Transaction
-from .serializers import RankSerializer, AccountSerializer, CustomerSerializer, TransactionSerializer
+from .serializers import UserSerializer, RankSerializer, AccountSerializer, CustomerSerializer, TransactionSerializer
 from .permissions import IsAdminOrOwner
+
+
+class UserList(generics.ListCreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return User.objects.all()
+        else:
+            queryset = User.objects.filter(user=self.request.user)
+            return queryset
+
+
+class UserDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 
 class RankList(generics.ListCreateAPIView):

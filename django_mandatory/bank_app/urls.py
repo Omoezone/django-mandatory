@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from .api import RankList, RankDetail, AccountList, AccountDetail, CustomerList, CustomerDetail, \
+from .api import UserList, UserDetail, RankList, RankDetail, AccountList, AccountDetail, CustomerList, CustomerDetail, \
     TransactionList, TransactionDetail
 
 app_name = "bank_app"
@@ -23,6 +23,9 @@ urlpatterns = [
     path('staff_account_list_partial/<int:pk>/', views.staff_account_list_partial, name='staff_account_list_partial'),
     path('staff_account_details/<int:pk>/', views.staff_account_details, name='staff_account_details'),
 
+    path('user/api/v1/', UserList.as_view()),
+    path('user/api/v1/<int:pk>/', UserDetail.as_view()),
+    path('user/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
     path('rank/api/v1/', RankList.as_view()),
     path('rank/api/v1/<int:pk>/', RankDetail.as_view()),
     path('rank/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),
