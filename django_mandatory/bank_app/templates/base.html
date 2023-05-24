@@ -27,6 +27,7 @@
                 <li><a href="{% url 'bank_app:customer_account' %}">My Account</a></li>
                 <li><a href="{% url 'bank_app:make_transfer' %}">Make Transaction</a></li>
                   <li><a href="{% url 'bank_app:make_loan' %}">Make Loan</a></li>
+                  <li><a href="{% url 'bank_app:transfer_foreign' %}">Transfer Foreign</a></li>
                 {% endif %}
                 {% if user.is_staff %}
                 <li><a href="{% url 'admin:index' %}">Django Admin</a></li>

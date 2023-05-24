@@ -11,6 +11,8 @@ urlpatterns = [
     path('account_details/<int:pk>/', views.account_details, name='account_details'),
     path('make_transfer/', views.make_transfer, name='make_transfer'),
     path('make_loan/', views.make_loan, name='make_loan'),
+    path('transfer_foreign/', views.transfer_foreign, name='transfer_foreign'),
+    path('get_transfer_foreign/', views.get_transfer_foreign, name="get_transfer_foreign"),
 
     path('customer_dashboard/', views.customer_dashboard, name='customer_dashboard'),
     path('customer_account/', views.customer_account, name='customer_account'),

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Rank, Account, Customer, Transaction
+from .models import Rank, Account, Customer, Transaction, UID
 
 
 class RankSerializer(serializers.ModelSerializer):
@@ -30,6 +30,18 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Transaction
-        fields = '__all__'
+        fields = ('id', 'account', 'amount', 'description', 'transaction')
+
+    def process_transactions(data1, data2):
+        serializer1 = TransactionSerializer(data=data1)
+        serializer1.is_valid(raise_exception=True)
+        validated_data1 = serializer1.validated_data
+
+        serializer2 = TransactionSerializer(data=data2)
+        serializer2.is_valid(raise_exception=True)
+        validated_data2 = serializer2.validated_data
+
+        return validated_data1, validated_data2

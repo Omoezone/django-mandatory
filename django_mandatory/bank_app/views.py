@@ -1,14 +1,18 @@
+
+import requests
 from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view
 from django.http import HttpResponseRedirect
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, reverse
-from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm
+from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm, FtForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from .models import Account, Customer, Transaction
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from secrets import token_urlsafe
 from .errors import InsufficientFunds
+
 
 
 @login_required
@@ -218,4 +222,99 @@ def make_loan(request):
         return HttpResponseRedirect(reverse('bank_app:customer_dashboard'))
     return render(request, 'bank/make_loan.html', {})
 
+@login_required()
+@transaction.atomic()
+def transfer_foreign(request):
+    assert not request.user.is_staff, 'Staff user routing customer view.'
+    # LAD DEN TAGE DEFAULT URL
+    url = 'http://localhost:8000/get_transfer_foreign/'
+    username = "admin"
+    password = "adgangskode"
 
+    # Create Transaction for bank 1.
+    try:
+        if request.method == 'POST':
+            form = FtForm(request.POST, initial={"credit_account": 3})
+            if form.is_valid():
+                amount = form.cleaned_data['amount']
+                debit_account = Account.objects.get(pk=form.cleaned_data['debit_account'])
+                debit_description = form.cleaned_data['debit_description']
+                credit_account = Account.objects.get(pk=form.cleaned_data['credit_account'])
+                credit_description = form.cleaned_data['credit_description']
+            try:
+                print(amount, debit_account, debit_description, credit_account, credit_description)
+                transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account, credit_description)
+                print("transfer id", transfer)
+
+                data = {"id": transfer, "amount": amount, "debit_account": debit_account}
+                response = requests.post(url, data, auth=(username, password))
+                if response.status_code == 200:
+                    print("it works")
+                else:
+                    print("error with requests post: ", response.status_code)
+
+                print("response in method", response.content)
+                return transaction_details(request, transfer)
+            except InsufficientFunds:
+                context = {
+                    'title': 'Transfer Error',
+                    'error': 'Insufficient funds for transfer.'
+                }
+                return render(request, 'bank/error.html', context)
+        else:
+            form = FtForm(initial={"credit_account": 3})
+            context = {
+                'form': form,
+            }
+            print("context", context)
+            return render(request, 'bank/transfer_foreign.html', context)
+
+    except IntegrityError:
+        print("ERROR HAPPENED IN FOREIGN TRANSFER")
+        pass
+    # Make the debit account in the request the account that sends money
+    # Make the credit account in the request the bank account
+
+    # step 1 lav en transfer for bank a
+
+    # step 2 send post to bank b ud fra transfer fra step 1,
+    #   der siger at du gerne vil lave en transaction
+
+    # step 3 bank b saves post data and send a confirm token to bank a. It sets itself in a reserved state
+
+    # step 4 bank a recieves confirm token and checks for any changes
+
+    # step 4.1 if any changes, send a put or patch to bank b with changed data
+    # step 4.2 bank b recieves and updates its data from post requests earlier and send confirm token back
+    # Repeat until no changes or second trigger (not thought of yet)
+
+    # step 5 bank b, creates the transaction and send a confirmation to bank a
+
+
+
+
+    # If success create one for bank 2.
+    # Make the debit account in the request be the bank
+    # Make the credit be the account we want to send to
+
+
+    # Handle errors with roolback()
+        # Eventually call this method again, but with PUT or DELETE that does the opposite
+    pass
+
+
+@login_required()
+@api_view(['POST', 'PUT', 'DELETE'])
+@transaction.atomic()
+def get_transfer_foreign(request):
+    print("HELLO MATE FROM GETTAR")
+    # Does the creation of transfer
+    if request.method == 'POST':
+        print("-------- RECIEVED POST REQUEST FROM BANK1 _------")
+        # Does the update/change of created transfer
+        return "1235325"
+    elif request.method == 'PUT':
+        pass
+    # Delete the transfer for potential reset
+    elif request.method == 'DELETE':
+        pass
