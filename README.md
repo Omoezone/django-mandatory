@@ -5,6 +5,10 @@ Vejledning og kommandoer i django: Sørg altid for at være i folderen hvor file
 
 Hvis dette er første gang, du kører programmet, gør dette:
 
+NOTE TIL PIP INSTALL: 
+   Det anbefales at installere "pillow", "numpy" og "pygame" før man installerer fra requirements.txt. 
+   Spørg ikke hvorfor, men det har virket at fjerne dem derfra og installerer dem seperat fra requirements.
+
 1. Slet din nuværende database, hvis en eksisterer (kan gøres ved at slette dine migrationsfiler + filen db.sqlite3)
 2. kør "python manage.py makemigrations"
 3. kør "python manage.py migrate"
