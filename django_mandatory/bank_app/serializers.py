@@ -44,3 +44,9 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = '__all__'
+
+
+class b2bSerializer(serializers.Serializer):
+    amount = serializers.IntegerField(allow_null=False, required=True, min_value=0)
+    d_account = serializers.IntegerField(allow_null=False, required=True, min_value=0)
+    d_description = serializers.CharField(max_length=100)

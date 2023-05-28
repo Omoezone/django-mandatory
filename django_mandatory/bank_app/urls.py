@@ -21,6 +21,10 @@ urlpatterns = [
     path('staff_account_list_partial/<int:pk>/', views.staff_account_list_partial, name='staff_account_list_partial'),
     path('staff_account_details/<int:pk>/', views.staff_account_details, name='staff_account_details'),
 
+    path('send_transfer_request/', views.send_transfer_request, name='send_transfer_request'),
+    path('foreign_transfer_details/', views.foreign_transfer_details, name='foreign_transfer_details'),
+    path('api/receive_transfer/', views.receive_transfer, name='receive_transfer'),
+
     path('user/api/v1/', UserList.as_view()),
     path('user/api/v1/<int:pk>/', UserDetail.as_view()),
     path('user/api/v1/dj-rest-auth/', include('dj_rest_auth.urls')),

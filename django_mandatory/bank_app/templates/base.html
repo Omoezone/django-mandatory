@@ -25,7 +25,8 @@
               <ul>
                 {% if not user.is_staff %}
                 <li><a href="{% url 'bank_app:customer_account' %}">My Account</a></li>
-                <li><a href="{% url 'bank_app:make_transfer' %}">Make Transaction</a></li>
+                <li><a href="{% url 'bank_app:make_transfer' %}">Internal Transfer</a></li>
+                  <li><a href="{% url 'bank_app:send_transfer_request' %}">External Transfer</a></li>
                   <li><a href="{% url 'bank_app:make_loan' %}">Make Loan</a></li>
                 {% endif %}
                 {% if user.is_staff %}

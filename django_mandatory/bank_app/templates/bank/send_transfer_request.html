@@ -1,0 +1,9 @@
+{% block main %}
+<form action="{% url 'bank_app:send_transfer_request' %}" method="post">
+    {% csrf_token %}
+    <fieldset>
+        {{ form }}
+    <button>Make Transfer</button>
+    </fieldset>
+</form>
+{% endblock main %}
