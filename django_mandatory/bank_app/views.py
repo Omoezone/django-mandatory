@@ -227,7 +227,7 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     # assert not data.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8000/api/receive_transfer/'
+    url = 'http://localhost:8001/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
         reqData = request.POST
@@ -259,16 +259,15 @@ def send_transfer_request(request):
                                             'Content-Type': 'application/json'})
                 print("RESPONSE from forst request ", response)
                 # Receive token from bank b
-                response_token = response.json()
-                request.session['transfer_token'] = response_token['token']
-                print("SESSION TOKEN KEY BANK A ", request.session['transfer_token'])
+                #response_token = response.json()
+
 
                 # return token to bank b
-                endResponse = requests.post(url, json=response_token, headers={
-                                            'Authorization': f'Token {token}',
-                                            'Content-Type': 'application/json'})
-                endResponse = endResponse.json()
-                print("endresponse", endResponse)
+                #endResponse = requests.post(url, json=response_token, headers={
+                 #                           'Authorization': f'Token {token}',
+                  #                          'Content-Type': 'application/json'})
+                #endResponse = endResponse.json()
+                #print("endresponse", endResponse)
 
                 return transaction_details(request, transfer)
 
@@ -309,34 +308,6 @@ def receive_transfer(request):
             c_description = f"Money Recieved from external ID: {deserialized_data['d_account']}"
             d_account = Account.objects.get(pk=deserialized_data['d_account'])
             d_description = deserialized_data['d_description']
-            if not request.session._session:
-                # Check if the token is already stored in the session
-                stored_token = request.session.get('transfer_token')
-                if not stored_token:
-                    print("ENTERED STORED TOKEN TJEK")
-                    # Create a token for bank a
-                    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-                    request.session['transfer_token'] = token
-                    request.session.modified = True
-
-            # Update the session data with the new transfer information
-            request.session['transfer_amount'] = amount
-            request.session['debit_account_id'] = d_account.id
-            request.session['debit_description'] = d_description
-            request.session['credit_account_id'] = c_account.id
-            request.session['credit_description'] = c_description
-            request.session.modified = True
-            print("BEFORE RETURN TOKEN")
-            # Return the token as a response
-            return Response({'token': token})
-        elif request.session.get('transfer_token') == request.POST.get('response_token'):
-            print("ENTERED TRANSFER CREATEION FOR BANK B", request.session.get("transfer_token"))
-            amount = request.session['transfer_amount']
-            d_account = request.session['debit_account_id']
-            d_description = request.session['debit_description']
-            c_account = request.session['credit_account_id']
-            c_description = request.session['credit_description']
-            request.session.modified = True
 
             # Process the transfer and create the transfer object
             transfer = Transaction.transfer(amount, c_account, c_description, d_account, d_description)
