@@ -12,9 +12,7 @@ from .errors import InsufficientFunds
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
-import random
-import string
-from rest_framework.authtoken.models import Token
+from django.core.mail import send_mail
 from .serializers import b2bSerializer
 
 
@@ -58,6 +56,9 @@ def staff_new_customer(request):
                 )
                 print(f'********** Username: {username} -- Password: {password}')
                 Customer.objects.create(user=user, rank=rank, phone=phone)
+                emailRes = send_welcome_email(user) #This works, but it needs proper allowance for outlook
+                print("Email sent: ", emailRes)
+                # Or proper setup of development SMTP server
                 return staff_customer_details(request, user.pk)
             except IntegrityError:
                 context = {
@@ -74,6 +75,14 @@ def staff_new_customer(request):
     }
     return render(request, 'bank/staff_new_customer.html', context)
 
+
+def send_welcome_email(user):
+    subject = f'Welcome to kea bank {user.username}'
+    message = 'Welcome to kea bank.\n\nThank you for joining.\nAn account has automaticly been made for you.' \
+              '\nRegards from KEA Bank'
+    from_email = 'KeaBank@Bank.dk'
+    to_email = [user.email]
+    return send_mail(subject, message, from_email, to_email, fail_silently=False)
 
 @login_required
 def staff_customer_details(request, pk):
@@ -227,7 +236,7 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     # assert not data.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8000/api/receive_transfer/'
+    url = 'http://localhost:8001/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
         reqData = request.POST
@@ -247,9 +256,13 @@ def send_transfer_request(request):
                     "d_account": reqData.get("debit_account"),
                     "d_description": reqData.get("debit_description")
                 }
-                # User authentication
-                user = User.objects.get(pk=request.user.pk)
-                token, created = Token.objects.get_or_create(user=user)
+                # User authentication'
+                credentials = {
+                    'username': 'dummy',
+                    'password': 'adgangskode'
+                }
+                tokenRes = requests.post('http://localhost:8001/api-token-auth/', data=credentials)
+                token = tokenRes.json().get("token")
 
                 # Send data to bank b
                 print("BEFORE REQUEST TO BANK B")
@@ -259,18 +272,8 @@ def send_transfer_request(request):
                                             'Content-Type': 'application/json'})
                 print("RESPONSE from forst request ", response)
                 # Receive token from bank b
-                #response_token = response.json()
-
-
-                # return token to bank b
-                #endResponse = requests.post(url, json=response_token, headers={
-                 #                           'Authorization': f'Token {token}',
-                  #                          'Content-Type': 'application/json'})
-                #endResponse = endResponse.json()
-                #print("endresponse", endResponse)
 
                 return transaction_details(request, transfer)
-
             except InsufficientFunds:
                 context = {
                     'title': 'Transfer Error',

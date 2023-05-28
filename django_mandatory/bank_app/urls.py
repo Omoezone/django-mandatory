@@ -2,7 +2,7 @@ from django.urls import path, include
 from . import views
 from .api import UserList, UserDetail, RankList, RankDetail, AccountList, AccountDetail, CustomerList, CustomerDetail, \
     TransactionList, TransactionDetail
-
+from rest_framework.authtoken.views import obtain_auth_token
 app_name = "bank_app"
 
 urlpatterns = [
@@ -24,6 +24,7 @@ urlpatterns = [
     path('send_transfer_request/', views.send_transfer_request, name='send_transfer_request'),
     path('foreign_transfer_details/', views.foreign_transfer_details, name='foreign_transfer_details'),
     path('api/receive_transfer/', views.receive_transfer, name='receive_transfer'),
+    path('api-token-auth/', obtain_auth_token),
 
     path('user/api/v1/', UserList.as_view()),
     path('user/api/v1/<int:pk>/', UserDetail.as_view()),
