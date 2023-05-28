@@ -227,7 +227,7 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     # assert not data.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8001/api/receive_transfer/'
+    url = 'http://localhost:8000/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
         reqData = request.POST
