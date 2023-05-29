@@ -312,6 +312,8 @@ def receive_transfer(request):
             d_account = Account.objects.get(pk=deserialized_data['d_account'])
             d_description = deserialized_data['d_description']
 
+
+
             # Process the transfer and create the transfer object
             transfer = Transaction.transfer(amount, c_account, c_description, d_account, d_description)
             print("made transfer in bank b", transfer)
