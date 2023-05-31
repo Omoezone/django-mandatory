@@ -47,6 +47,16 @@ INSTALLED_APPS = [
 
     # apps
     'bank_app',
+
+    # multifactor authentication
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_email',
+    'two_factor.plugins.phonenumber',
+    'two_factor',
+    
+
 ]
 
 MIDDLEWARE = [
@@ -57,6 +67,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # multifactor authentication
+
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
 ]
 
 ROOT_URLCONF = 'django_mandatory.urls'
@@ -146,8 +160,22 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_URL = 'two_factor:login'
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 CUSTOMER_RANK_LOAN = 50
+
+# SMTP Email backend config
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'  # SMTP server host is running locally with aiosmtpd
+EMAIL_PORT = 8025 # SMTP server port for aios
+EMAIL_HOST_USER = None
+EMAIL_HOST_PASSWORD = None
+EMAIL_USE_TLS = False  # Use TLS encryption for SMTP connection
+
+# Default Email Configuration
+DEFAULT_FROM_EMAIL = 'dlsMandatoryKea@outlook.dk'
+SERVER_EMAIL = 'dlsMandatoryKea@outlook.dk'
+

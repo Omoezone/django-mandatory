@@ -12,6 +12,8 @@ class Command(BaseCommand):
         bank_user.save()
         ipo_account = Account.objects.create(user=bank_user, name='Bank IPO Account')
         ops_account = Account.objects.create(user=bank_user, name='Bank OPS Account')
+        transfer_in = Account.objects.create(user=bank_user, name='Bank transfer in')
+        transfer_out = Account.objects.create(user=bank_user, name='Bank transfer out')
         bank_customer = Customer(user=bank_user, phone='555666')
         bank_customer.save()
         Transaction.transfer(
@@ -20,6 +22,14 @@ class Command(BaseCommand):
             'Operational Credit',
             ops_account,
             'Operational Credit',
+            is_loan=True
+        )
+        Transaction.transfer(
+            10_000_000,
+            transfer_out,
+            'Start Credit',
+            transfer_in,
+            'Start Credit',
             is_loan=True
         )
 
@@ -37,6 +47,25 @@ class Command(BaseCommand):
             ops_account,
             'Payout to dummy',
             dummy_account,
+            'Payout from bank'
+        )
+
+        admin_user = User.objects.create_user('admin', email='admin@mail.dk', password='adgangskode')
+        admin_user.first_name = 'Admin'
+        admin_user.last_name = 'user'
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.save()
+        admin_customer = Customer(user=admin_user, phone='88885555')
+        admin_customer.save()
+        admin_account = Account.objects.create(user=admin_user, name='Admin account')
+        admin_account.save()
+
+        Transaction.transfer(
+            1_000,
+            ops_account,
+            'Payout to admin',
+            admin_account,
             'Payout from bank'
         )
 
