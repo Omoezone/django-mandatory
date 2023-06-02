@@ -59,3 +59,7 @@ class TransferForm(forms.Form):
             self._errors['amount'] = self.error_class(['Amount must be positive.'])
 
         return self.cleaned_data
+
+
+class SearchCustomers(forms.Form):
+    search_query = forms.CharField(label="Search For Customer", max_length=40)
