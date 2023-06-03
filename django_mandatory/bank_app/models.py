@@ -103,3 +103,21 @@ class Transaction(models.Model):
     def __str__(self):
         return f'{self.amount} : {self.transaction} : {self.date} : {self.account} : {self.description}'
 
+
+class TransferModel(models.Model):
+    class StateEnum(models.TextChoices):
+        INACTIVE = "INACTIVE"
+        PENDING = "PENDING"
+        CREATED = "CREATED"
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    debit_account = models.IntegerField()
+    debit_description = models.CharField(max_length=255)
+    credit_account = models.IntegerField()
+    credit_description = models.CharField(max_length=255)
+    idempotence = models.IntegerField()
+    state = models.CharField(max_length=15, choices=StateEnum.choices, default=StateEnum.INACTIVE)
+
+    def __str__(self):
+        return f'{self.amount},{self.debit_account},{self.debit_description},{self.credit_account},' \
+               f'{self.credit_description}, {self.idempotence}, {self.state}'

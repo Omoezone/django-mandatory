@@ -2,18 +2,17 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, reverse
-from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm
+from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm, TransModelForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
-from .models import Account, Customer, Transaction
+from .models import Account, Customer, Transaction, TransferModel
 from django.db import IntegrityError
 from secrets import token_urlsafe
 from .errors import InsufficientFunds
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
-import random
-import string
+import time
 from rest_framework.authtoken.models import Token
 from .serializers import b2bSerializer
 
@@ -123,7 +122,7 @@ def staff_account_list_partial(request, pk):
 
 @login_required
 def staff_account_details(request, pk):
-    assert request.user.is_staff, 'Customer user routing staff view.'
+    #assert request.user.is_staff, 'Customer user routing staff view.'
 
     account = get_object_or_404(Account, pk=pk)
     context = {
@@ -226,7 +225,7 @@ def make_loan(request):
 
 # --- Bank A ---
 def send_transfer_request(request):
-    # assert not data.user.is_staff, 'Staff user routing customer view.'
+    assert not request.user.is_staff, 'Staff user routing customer view.'
     url = 'http://localhost:8000/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
@@ -234,7 +233,6 @@ def send_transfer_request(request):
         form = TransferForm(request.POST)
         form.fields['debit_account'].queryset = request.user.customer.accounts
         if form.is_valid():
-            # Look into setting the reciever
             amount = form.cleaned_data['amount']
             debit_account = Account.objects.get(pk=form.cleaned_data['debit_account'].pk)
             debit_description = form.cleaned_data['debit_description']
@@ -242,43 +240,36 @@ def send_transfer_request(request):
             credit_description = form.cleaned_data['credit_description']
             try:
                 transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account,credit_description)
-                payload = {
-                    "amount": reqData.get("amount"),
-                    "d_account": reqData.get("debit_account"),
-                    "d_description": reqData.get("debit_description")
-                }
+                print(transfer)
+                # midlertidig object der bliver brugt til kommunikation mellem bank a og bank B
+                transModel = TransferModel.objects.create(
+                    amount=request.POST.get("amount"),
+                    debit_account=request.POST.get("debit_account"),
+                    debit_description=request.POST.get("debit_description"),
+                    credit_account=request.POST.get("credit_account"),
+                    credit_description=request.POST.get("credit_description"),
+                    idempotence=int(time.time()),
+                )
+
                 # User authentication
+                # Dette bliver brugt til at få auth api key
                 user = User.objects.get(pk=request.user.pk)
                 token, created = Token.objects.get_or_create(user=user)
 
                 # Send data to bank b
-                print("BEFORE REQUEST TO BANK B")
-                response = requests.post(url, json=payload,
-                                         headers={
-                                            'Authorization': f'Token {token}',
-                                            'Content-Type': 'application/json'})
-                print("RESPONSE from forst request ", response)
-                # Receive token from bank b
-                response_token = response.json()
-                request.session['transfer_token'] = response_token['token']
-                print("SESSION TOKEN KEY BANK A ", request.session['transfer_token'])
-
-                # return token to bank b
-                endResponse = requests.post(url, json=response_token, headers={
-                                            'Authorization': f'Token {token}',
-                                            'Content-Type': 'application/json'})
-                endResponse = endResponse.json()
-                print("endresponse", endResponse)
-
-                return transaction_details(request, transfer)
-
+                #response = requests.post(url, json=transModel,
+                #                          headers={
+                #                            'Authorization': f'Token {token}',
+                 #                           'Content-Type': 'application/json'})
+                #print("RESPONSE from forst request ", response)
+                return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
                     'title': 'Transfer Error',
                     'error': 'Insufficient funds for transfer.'
                 }
                 return render(request, 'bank/error.html', context)
-        # Temp error handling
+        # Temp error handling HUSK AT FJERNE TIL SIDST
         else:
             context = {
                 'title': 'Form Error',
@@ -294,7 +285,39 @@ def send_transfer_request(request):
     return render(request, 'bank/send_transfer_request.html', context)
 
 
+@login_required()
+def view_transfer_data(request, pk):
+    # Får fat i det object der blev lavet tidligere
+    transModel = get_object_or_404(TransferModel, pk=pk)
+    if request.method == 'GET':
+        # instance=transModel er måden form ved hvilke object den arbejder med
+        transfer_form = TransModelForm(instance=transModel)
+    elif request.method == 'POST':
+        # make put request
+        transfer_form = TransModelForm(request.POST, instance=transModel)
+        print("im in post", request.POST)
+        if transfer_form.is_valid():
+            print("IT IS VALID")
+            # Eventuelt check forms.py for at se hvordan dette bliver håndteret. Har lavet en custom save()
+            transfer_form.save()
+            # This part should make a put requests to bank b with the transfer_form data
+            # Bank B should then update the already existing TransferModel object.
+            # It would be a good idead to first do get_object_or_404 in bank B to get the object
+            # Then make a check for wether the TransferModel.StateEnum er enten CREATED eller PENDING
+            # If pending just update and send ok status response.
+            # If created, use the TransferModel data to create a Transaction and transfer
+            # requests.put()
+    else:
+        transfer_form = TransModelForm(instance=transModel)
+    context = {
+        "transModel": transModel,
+        "transfer_form": transfer_form,
+    }
+    return render(request, 'bank/view_transfer_data.html', context)
+
 # --- Bank B ---
+# DETTE ER IKKE DENS NUVÆRENDE KORREKTE STADIE! TAG ALT MED ET GRAM SALT
+
 @api_view(['POST'])
 def receive_transfer(request):
     # Get data from bank a
@@ -302,44 +325,16 @@ def receive_transfer(request):
         TransferSerializer = b2bSerializer(data=request.data)
         if TransferSerializer.is_valid():
             deserialized_data = TransferSerializer.data
-
+            # DETTE SKAL JEG HAVE KIGGET MERE PÅ SOM DET NÆSTE, EFTER AT JEG HAR ÆNDRET I data
             # Access individual field values
             amount = deserialized_data['amount']
-            c_account = Account.objects.get(pk=3)  # Here we ask to always get id 3, as that is the bank: incoming transfer account
-            c_description = f"Money Recieved from external ID: {deserialized_data['d_account']}"
-            d_account = Account.objects.get(pk=deserialized_data['d_account'])
-            d_description = deserialized_data['d_description']
-            if not request.session._session:
-                # Check if the token is already stored in the session
-                stored_token = request.session.get('transfer_token')
-                if not stored_token:
-                    print("ENTERED STORED TOKEN TJEK")
-                    # Create a token for bank a
-                    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
-                    request.session['transfer_token'] = token
-                    request.session.modified = True
-
-            # Update the session data with the new transfer information
-            request.session['transfer_amount'] = amount
-            request.session['debit_account_id'] = d_account.id
-            request.session['debit_description'] = d_description
-            request.session['credit_account_id'] = c_account.id
-            request.session['credit_description'] = c_description
-            request.session.modified = True
-            print("BEFORE RETURN TOKEN")
-            # Return the token as a response
-            return Response({'token': token})
-        elif request.session.get('transfer_token') == request.POST.get('response_token'):
-            print("ENTERED TRANSFER CREATEION FOR BANK B", request.session.get("transfer_token"))
-            amount = request.session['transfer_amount']
-            d_account = request.session['debit_account_id']
-            d_description = request.session['debit_description']
-            c_account = request.session['credit_account_id']
-            c_description = request.session['credit_description']
-            request.session.modified = True
+            credit_account = Account.objects.get(pk=3)  # Here we ask to always get id 3, as that is the bank: incoming transfer account
+            credit_description = f"Money Recieved from external ID: {deserialized_data['debit_account']}"
+            debit_account = Account.objects.get(pk=deserialized_data['debit_account'])
+            debit_description = deserialized_data['debit_description']
 
             # Process the transfer and create the transfer object
-            transfer = Transaction.transfer(amount, c_account, c_description, d_account, d_description)
+            transfer = Transaction.transfer(amount, credit_account, credit_description, debit_account, debit_description)
             print("made transfer in bank b", transfer)
 
             # Clear the session data
@@ -353,9 +348,6 @@ def receive_transfer(request):
         return Response("not post", status=405)
 
 
-@login_required
-def foreign_transfer_details(request, pk):
-    pass
 
 
 

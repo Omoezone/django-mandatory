@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Customer, Account
+from .models import Customer, Account, TransferModel
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -59,3 +59,21 @@ class TransferForm(forms.Form):
             self._errors['amount'] = self.error_class(['Amount must be positive.'])
 
         return self.cleaned_data
+
+
+class TransModelForm(forms.ModelForm):
+    state = forms.BooleanField(label='Is last update', required=False)
+
+    class Meta:
+        model = TransferModel
+        fields = ('amount', 'debit_account', 'debit_description', 'credit_account', 'credit_description')
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.cleaned_data.get('state'):
+            instance.state = TransferModel.StateEnum.CREATED
+        else:
+            instance.state = TransferModel.StateEnum.PENDING
+        if commit:
+            instance.save()
+        return instance

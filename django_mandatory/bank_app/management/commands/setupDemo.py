@@ -58,15 +58,6 @@ class Command(BaseCommand):
         admin_user.save()
         admin_customer = Customer(user=admin_user, phone='88885555')
         admin_customer.save()
-        admin_account = Account.objects.create(user=admin_user, name='Admin account')
-        admin_account.save()
 
-        Transaction.transfer(
-            1_000,
-            ops_account,
-            'Payout to admin',
-            admin_account,
-            'Payout from bank'
-        )
 
 
