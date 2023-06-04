@@ -257,11 +257,11 @@ def send_transfer_request(request):
                 token, created = Token.objects.get_or_create(user=user)
 
                 # Send data to bank b
-                #response = requests.post(url, json=transModel,
-                #                          headers={
-                #                            'Authorization': f'Token {token}',
-                 #                           'Content-Type': 'application/json'})
-                #print("RESPONSE from forst request ", response)
+                response = requests.post(url, json=transModel,
+                                          headers={
+                                            'Authorization': f'Token {token}',
+                                           'Content-Type': 'application/json'})
+                print("RESPONSE from first request ", response)
                 return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
@@ -325,19 +325,8 @@ def receive_transfer(request):
         TransferSerializer = b2bSerializer(data=request.data)
         if TransferSerializer.is_valid():
             deserialized_data = TransferSerializer.data
-            # DETTE SKAL JEG HAVE KIGGET MERE PÅ SOM DET NÆSTE, EFTER AT JEG HAR ÆNDRET I data
-            # Access individual field values
-            amount = deserialized_data['amount']
-            credit_account = Account.objects.get(pk=3)  # Here we ask to always get id 3, as that is the bank: incoming transfer account
-            credit_description = f"Money Recieved from external ID: {deserialized_data['debit_account']}"
-            debit_account = Account.objects.get(pk=deserialized_data['debit_account'])
-            debit_description = deserialized_data['debit_description']
-
-            # Process the transfer and create the transfer object
-            transfer = Transaction.transfer(amount, credit_account, credit_description, debit_account, debit_description)
-            print("made transfer in bank b", transfer)
-
-            # Clear the session data
+            transfer_object = TransferModel(**deserialized_data)
+            print("transfer_object data is: ", transfer_object)
 
             return Response("Transaction completed", status=201)
         else:
