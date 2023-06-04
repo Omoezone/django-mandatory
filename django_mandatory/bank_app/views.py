@@ -327,26 +327,30 @@ def view_transfer_data(request, pk):
 # --- Bank B ---
 # DETTE ER IKKE DENS NUVÆRENDE KORREKTE STADIE! TAG ALT MED ET GRAM SALT
 
-@api_view(['POST'])
+
+@api_view(['POST', 'PUT'])
 def receive_transfer(request):
     # Get data from bank a
     print(request.data)
     if request.method == 'POST':
         TransferSerializer = TransferModelSerializer(data=request.data)
         if TransferSerializer.is_valid():
-            deserialized_data = TransferSerializer.data
-            transfer_object = TransferModel(**deserialized_data)
-            print("transfer_object data is: ", transfer_object)
-
-            return Response("Transaction completed", status=201)
+            try:
+                deserialized_data = TransferSerializer.data
+                transfer_object = TransferModel(**deserialized_data)
+                transfer_object.state = TransferModel.StateEnum.PENDING
+                transfer_object.save()
+                print("transfer_object data is: ", transfer_object)
+                return Response("Transaction initialized", status=200)
+            except:
+                raise Exception
         else:
             return Response("Error with creation of transaction", status=409)
         # Return the token as a response
         return Response("Token from bank b", token)
+    elif request.method == 'PUT':
+        pass
     else:
-        return Response("not post", status=405)
-
-
-
+        return Response("error with reqeust method", status=405)
 
 
