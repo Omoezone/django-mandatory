@@ -245,9 +245,9 @@ def send_transfer_request(request):
                 # midlertidig object der bliver brugt til kommunikation mellem bank a og bank B
                 transModel = TransferModel.objects.create(
                     amount=request.POST.get("amount"),
-                    debit_account=request.POST.get("debit_account"),
+                    debit_account=int(request.POST.get("debit_account")),
                     debit_description=request.POST.get("debit_description"),
-                    credit_account=request.POST.get("credit_account"),
+                    credit_account=int(request.POST.get("credit_account")),
                     credit_description=request.POST.get("credit_description"),
                     idempotence=int(time.time()),
                 )
@@ -256,23 +256,22 @@ def send_transfer_request(request):
                 # Dette bliver brugt til at få auth api key
                 user = User.objects.get(pk=request.user.pk)
                 token, created = Token.objects.get_or_create(user=user)
+                authResponse = requests.post("http://localhost:8001/api-token-auth/",
+                                       data={"username": "dummy", "password": "adgangskode"})
+                tokenB = authResponse.json()
+                print("token from bank b", tokenB["token"])
 
                 transfer_serializer = TransferModelSerializer(transModel)
                 serialized_data = transfer_serializer.data
 
-                # Convert the serialized data to JSON
-                json_data = json.dumps(serialized_data)
-
                 # Send data to bank b
-                response = requests.post(url, json=serialized_data,
-                                          headers={
-                                            'Authorization': f'Token {token}',
-                                           'Content-Type': 'application/json'})
+                response = requests.post(url, json=serialized_data, headers={'Authorization': f'Token {tokenB["token"]}',
+                                                                       'Content-Type': 'application/json'})
                 if response.status_code == 401:
                     raise NotAuthenticatedAPI
 
                 print("RESPONSE from first request ", response)
-                return view_transfer_data(request, transModel.pk)
+                #return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
                     'title': 'Transfer Error',
@@ -331,6 +330,7 @@ def view_transfer_data(request, pk):
 @api_view(['POST'])
 def receive_transfer(request):
     # Get data from bank a
+    print(request.data)
     if request.method == 'POST':
         TransferSerializer = TransferModelSerializer(data=request.data)
         if TransferSerializer.is_valid():

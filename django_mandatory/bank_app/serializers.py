@@ -46,7 +46,18 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class IntegerField(serializers.Field):
+    def to_internal_value(self, data):
+        return int(data)
+
+    def to_representation(self, value):
+        return str(value)
+
+
 class TransferModelSerializer(serializers.ModelSerializer):
+    debit_account = IntegerField()
+    credit_account = IntegerField()
+
     class Meta:
         model = TransferModel
         fields = ('amount', 'debit_account', 'debit_description', 'credit_account', 'credit_description',
