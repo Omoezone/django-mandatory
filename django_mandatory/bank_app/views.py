@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from .models import Account, Customer, Transaction, TransferModel
 from django.db import IntegrityError
 from secrets import token_urlsafe
-from .errors import InsufficientFunds, NotAuthenticatedAPI, PostException, PutException
+from .errors import InsufficientFunds, NotAuthenticatedAPI, PostException, PutException, TransferError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
@@ -227,20 +227,11 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     assert not request.user.is_staff, 'Staff user routing customer view.'
-    # Get data cleaned from frontend
     if request.method == 'POST':
-        reqData = request.POST
         form = TransferForm(request.POST)
         form.fields['debit_account'].queryset = request.user.customer.accounts
         if form.is_valid():
-            amount = form.cleaned_data['amount']
-            debit_account = Account.objects.get(pk=form.cleaned_data['debit_account'].pk)
-            debit_description = form.cleaned_data['debit_description']
-            credit_account = Account.objects.get(pk=form.cleaned_data['credit_account'])
-            credit_description = form.cleaned_data['credit_description']
             try:
-                transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account, credit_description)
-                print(transfer)
                 # midlertidig object der bliver brugt til kommunikation mellem bank a og bank B
                 transModel = TransferModel.objects.create(
                     amount=request.POST.get("amount"),
@@ -250,27 +241,20 @@ def send_transfer_request(request):
                     credit_description=request.POST.get("credit_description"),
                     idempotence=int(time.time()),
                 )
-
+                # This one is used if the external transfer is tested locally
+                #user = User.objects.get(pk=request.user.pk)
+                #token, created = Token.objects.get_or_create(user=user)
                 # User authentication
-                # Dette bliver brugt til at få auth api key
-                user = User.objects.get(pk=request.user.pk)
-                token, created = Token.objects.get_or_create(user=user)
                 authResponse = requests.post("http://localhost:8001/api-token-auth/",
                                        data={"username": "dummy", "password": "adgangskode"})
                 tokenB = authResponse.json()
-                print("token from bank b", tokenB["token"])
-
                 transfer_serializer = TransferModelSerializer(transModel)
                 serialized_data = transfer_serializer.data
-                print("SERIALIZED DATA POST", serialized_data)
-
-                # Send data to bank b
+                # Start transaction/communication with bank b
                 response = requests.post(settings.EXTERNAL_BANK_URL, json=serialized_data, headers={'Authorization': f'Token {tokenB["token"]}',
                                                                        'Content-Type': 'application/json'})
                 if response.status_code == 401:
                     raise NotAuthenticatedAPI
-
-                print("RESPONSE from first request ", response)
                 return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
@@ -278,13 +262,6 @@ def send_transfer_request(request):
                     'error': 'Insufficient funds for transfer.'
                 }
                 return render(request, 'bank/error.html', context)
-        # Temp error handling HUSK AT FJERNE TIL SIDST
-        else:
-            context = {
-                'title': 'Form Error',
-                'error': 'Unable to clean the formdata, please try again'
-            }
-            return render(request, 'bank/error.html', context)
     else:
         form = TransferForm()
         form.fields['debit_account'].queryset = request.user.customer.accounts
@@ -296,33 +273,44 @@ def send_transfer_request(request):
 
 @login_required()
 def view_transfer_data(request, pk):
-    # Får fat i det object der blev lavet tidligere
     transModel = get_object_or_404(TransferModel, pk=pk)
-    print("transmodel: ", transModel)
     if request.method == 'GET':
-        # instance=transModel er måden form ved hvilke object den arbejder med
         transfer_form = TransModelForm(instance=transModel)
     elif request.method == 'POST':
-        # make put request
         transfer_form = TransModelForm(request.POST, instance=transModel)
         if transfer_form.is_valid():
-            print("IT IS VALID")
-            transfer_form.save()
-            authResponse = requests.post("http://localhost:8001/api-token-auth/",
-                                         data={"username": "dummy", "password": "adgangskode"})
-            tokenB = authResponse.json()
-            print("REQUEST DATA FOR PUT ", request.POST)
-            transfer_serializer = TransferModelSerializer(transModel)
-            serialized_data = transfer_serializer.data
-            print("SERIALIZED DATA PUT", serialized_data)
-
-            response = requests.put(settings.EXTERNAL_BANK_URL, json=serialized_data,
-                                     headers={'Authorization': f'Token {tokenB["token"]}',
-                                              'Content-Type': 'application/json'})
-            print("RES: ", response)
-            if response.status_code == 201:
-                print("ENTERED PUT END")
-                return customer_dashboard(request)
+            try:
+                print("IT IS VALID")
+                transfer_form.save()
+                # This is used to get the API key for bank B
+                authResponse = requests.post("http://localhost:8001/api-token-auth/",
+                                             data={"username": "dummy", "password": "adgangskode"})
+                tokenB = authResponse.json()
+                transfer_serializer = TransferModelSerializer(transModel)
+                serialized_data = transfer_serializer.data
+                response = requests.put(settings.EXTERNAL_BANK_URL, json=serialized_data,
+                                         headers={'Authorization': f'Token {tokenB["token"]}',
+                                                  'Content-Type': 'application/json'})
+                if response.status_code == 201:
+                    # End of transaction / communication
+                    amount = transModel.amount
+                    debit_account = Account.objects.get(pk=transModel.debit_account)
+                    debit_description = transModel.debit_description
+                    credit_account = Account.objects.get(pk=4)
+                    credit_description = transModel.credit_description
+                    transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account,
+                                                    credit_description)
+                    print(transfer)
+                    # Cleanup, as it is not needed anymore
+                    transModel.delete()
+                    return customer_dashboard(request)
+            except TransferError:
+                transModel.delete()
+                context = {
+                    'title': 'Transfer Error',
+                    'error': 'Problem happened when validating data.'
+                }
+                return render(request, 'bank/error.html', context)
     else:
         transfer_form = TransModelForm(instance=transModel)
     context = {
@@ -332,13 +320,9 @@ def view_transfer_data(request, pk):
     return render(request, 'bank/view_transfer_data.html', context)
 
 # --- Bank B ---
-# DETTE ER IKKE DENS NUVÆRENDE KORREKTE STADIE! TAG ALT MED ET GRAM SALT
-
-
 @api_view(['POST', 'PUT'])
 def receive_transfer(request):
-    # Get data from bank a
-    print(request.data)
+    # Post is the first part, where the placeholder object is first created for bank b
     if request.method == 'POST':
         TransferSerializer = TransferModelSerializer(data=request.data)
         if TransferSerializer.is_valid():
@@ -350,7 +334,8 @@ def receive_transfer(request):
                 print("transfer_object data is: ", transfer_object)
                 return Response("Transaction initialized", status=200)
             except:
-                # Look into changing this
+                # No reason to render error page, as this is only via HTTP/API
+                transfer_object.delete()
                 raise PostException
         else:
             return Response("Unable to validate serializer data", status=400)
@@ -359,17 +344,37 @@ def receive_transfer(request):
         if TransferSerializer.is_valid():
             try:
                 deserialized_data = TransferSerializer.data
+                print("DESERIALISED DATA: ", deserialized_data)
                 transfer_object = get_object_or_404(TransferModel, idempotence=deserialized_data["idempotence"])
-                if transfer_object.state == TransferModel.StateEnum.PENDING:
+                print("Transfer_object in Bank B", transfer_object)
+                if deserialized_data.get("state") == TransferModel.StateEnum.PENDING.value:
                     print("PENDING PUT")
+                    transfer_object.amount = deserialized_data["amount"]
+                    transfer_object.debit_account = deserialized_data["debit_account"]
+                    transfer_object.debit_description = deserialized_data["debit_description"]
+                    transfer_object.credit_account = deserialized_data["credit_account"]
+                    transfer_object.credit_description = deserialized_data["credit_description"]
+                    transfer_object.state = deserialized_data["state"]
                     transfer_object.save()
                     return Response("Transaction updated", status=204)
-                elif transfer_object.state == TransferModel.StateEnum.CREATED:
+                elif deserialized_data.get("state") == TransferModel.StateEnum.CREATED.value:
                     print("ENTERED CREATED STATE")
-                    transaction_transfer = Transaction.transfer(transfer_object.amount, transfer_object.credit_account, transfer_object.credit_description, transfer_object.debit_account, transfer_object.debit_description)
+                    amount = Decimal(deserialized_data.get("amount"))
+                    debit_account = Account.objects.get(pk=3)
+                    debit_description = deserialized_data.get("debit_description")
+                    credit_account = Account.objects.get(pk=int(deserialized_data.get("debit_account")))
+                    credit_description = deserialized_data.get("credit_description")
+                    print(amount, debit_account, debit_description, credit_account, credit_description)
+                    print(type(amount), type(debit_account), type(debit_description), type(credit_account), type(credit_description))
+
+                    transaction_transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account, credit_description)
                     print("TRANSACTION BANK B", transaction_transfer)
+                    transfer_object.state = TransferModel.StateEnum.CREATED
+                    transfer_object.save()
                     return Response("Transaction Completed", status=201)
             except:
+                # No reason to render error page, as this is only via HTTP/API
+                transfer_object.delete()
                 raise PutException
     else:
         return Response("error with reqeust method", status=405)
