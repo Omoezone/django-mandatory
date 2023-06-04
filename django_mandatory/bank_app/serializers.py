@@ -46,7 +46,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class b2bSerializer(serializers.ModelSerializer):
+class TransferModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransferModel
         fields = ('amount', 'debit_account', 'debit_description', 'credit_account', 'credit_description',

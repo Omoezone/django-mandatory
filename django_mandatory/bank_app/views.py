@@ -8,13 +8,14 @@ from django.core.exceptions import PermissionDenied
 from .models import Account, Customer, Transaction, TransferModel
 from django.db import IntegrityError
 from secrets import token_urlsafe
-from .errors import InsufficientFunds
+from .errors import InsufficientFunds, NotAuthenticatedAPI
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
 import time
+import json
 from rest_framework.authtoken.models import Token
-from .serializers import b2bSerializer
+from .serializers import TransferModelSerializer
 
 
 @login_required
@@ -226,7 +227,7 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     assert not request.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8000/api/receive_transfer/'
+    url = 'http://localhost:8001/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
         reqData = request.POST
@@ -256,11 +257,20 @@ def send_transfer_request(request):
                 user = User.objects.get(pk=request.user.pk)
                 token, created = Token.objects.get_or_create(user=user)
 
+                transfer_serializer = TransferModelSerializer(transModel)
+                serialized_data = transfer_serializer.data
+
+                # Convert the serialized data to JSON
+                json_data = json.dumps(serialized_data)
+
                 # Send data to bank b
-                response = requests.post(url, json=transModel,
+                response = requests.post(url, json=serialized_data,
                                           headers={
                                             'Authorization': f'Token {token}',
                                            'Content-Type': 'application/json'})
+                if response.status_code == 401:
+                    raise NotAuthenticatedAPI
+
                 print("RESPONSE from first request ", response)
                 return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
@@ -322,7 +332,7 @@ def view_transfer_data(request, pk):
 def receive_transfer(request):
     # Get data from bank a
     if request.method == 'POST':
-        TransferSerializer = b2bSerializer(data=request.data)
+        TransferSerializer = TransferModelSerializer(data=request.data)
         if TransferSerializer.is_valid():
             deserialized_data = TransferSerializer.data
             transfer_object = TransferModel(**deserialized_data)
