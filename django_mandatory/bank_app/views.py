@@ -1,14 +1,14 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from decimal import Decimal
-from django.shortcuts import render, get_object_or_404, reverse, redirect
+from django.shortcuts import render, get_object_or_404, reverse
 from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm, TransModelForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from .models import Account, Customer, Transaction, TransferModel
 from django.db import IntegrityError
 from secrets import token_urlsafe
-from .errors import InsufficientFunds, NotAuthenticatedAPI
+from .errors import InsufficientFunds, NotAuthenticatedAPI, PostException, PutException
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
@@ -239,7 +239,7 @@ def send_transfer_request(request):
             credit_account = Account.objects.get(pk=form.cleaned_data['credit_account'])
             credit_description = form.cleaned_data['credit_description']
             try:
-                transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account,credit_description)
+                transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account, credit_description)
                 print(transfer)
                 # midlertidig object der bliver brugt til kommunikation mellem bank a og bank B
                 transModel = TransferModel.objects.create(
@@ -305,14 +305,14 @@ def view_transfer_data(request, pk):
     elif request.method == 'POST':
         # make put request
         transfer_form = TransModelForm(request.POST, instance=transModel)
-        print("im in post", request.POST)
         if transfer_form.is_valid():
             print("IT IS VALID")
             transfer_form.save()
             authResponse = requests.post("http://localhost:8001/api-token-auth/",
                                          data={"username": "dummy", "password": "adgangskode"})
             tokenB = authResponse.json()
-            transfer_serializer = TransferModelSerializer(request.POST)
+            print("REQUEST DATA FOR PUT ", request.POST)
+            transfer_serializer = TransferModelSerializer(transModel)
             serialized_data = transfer_serializer.data
             print("SERIALIZED DATA PUT", serialized_data)
 
@@ -323,13 +323,6 @@ def view_transfer_data(request, pk):
             if response.status_code == 201:
                 print("ENTERED PUT END")
                 return customer_dashboard(request)
-            # This part should make a put requests to bank b with the transfer_form data
-            # Bank B should then update the already existing TransferModel object.
-            # It would be a good idead to first do get_object_or_404 in bank B to get the object
-            # Then make a check for wether the TransferModel.StateEnum er enten CREATED eller PENDING
-            # If pending just update and send ok status response.
-            # If created, use the TransferModel data to create a Transaction and transfer
-            # requests.put()
     else:
         transfer_form = TransModelForm(instance=transModel)
     context = {
@@ -358,7 +351,7 @@ def receive_transfer(request):
                 return Response("Transaction initialized", status=200)
             except:
                 # Look into changing this
-                raise Exception
+                raise PostException
         else:
             return Response("Unable to validate serializer data", status=400)
     elif request.method == 'PUT':
@@ -366,17 +359,17 @@ def receive_transfer(request):
         if TransferSerializer.is_valid():
             try:
                 deserialized_data = TransferSerializer.data
-                transfer_object = TransferModel(**deserialized_data)
+                transfer_object = get_object_or_404(TransferModel, idempotence=deserialized_data["idempotence"])
                 if transfer_object.state == TransferModel.StateEnum.PENDING:
+                    print("PENDING PUT")
                     transfer_object.save()
                     return Response("Transaction updated", status=204)
                 elif transfer_object.state == TransferModel.StateEnum.CREATED:
-                    Transaction.transfer(transfer_object.amount, transfer_object.credit_account,
-                                         transfer_object.credit_description, transfer_object.debit_account,
-                                         transfer_object.debit_description)
+                    print("ENTERED CREATED STATE")
+                    transaction_transfer = Transaction.transfer(transfer_object.amount, transfer_object.credit_account, transfer_object.credit_description, transfer_object.debit_account, transfer_object.debit_description)
+                    print("TRANSACTION BANK B", transaction_transfer)
                     return Response("Transaction Completed", status=201)
             except:
-                # Look into changing this
-                raise Exception
+                raise PutException
     else:
         return Response("error with reqeust method", status=405)

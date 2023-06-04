@@ -6,3 +6,9 @@ class TransferError(Exception):
 
 class NotAuthenticatedAPI(Exception):
     pass
+
+class PostException(Exception):
+    pass
+
+class PutException(Exception):
+    pass
