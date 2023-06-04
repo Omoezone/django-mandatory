@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from decimal import Decimal
-from django.shortcuts import render, get_object_or_404, reverse
+from django.shortcuts import render, get_object_or_404, reverse, redirect
 from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm, TransModelForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
@@ -13,7 +13,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
 import time
-import json
+from django.conf import settings
 from rest_framework.authtoken.models import Token
 from .serializers import TransferModelSerializer
 
@@ -227,7 +227,6 @@ def make_loan(request):
 # --- Bank A ---
 def send_transfer_request(request):
     assert not request.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8001/api/receive_transfer/'
     # Get data cleaned from frontend
     if request.method == 'POST':
         reqData = request.POST
@@ -263,15 +262,16 @@ def send_transfer_request(request):
 
                 transfer_serializer = TransferModelSerializer(transModel)
                 serialized_data = transfer_serializer.data
+                print("SERIALIZED DATA POST", serialized_data)
 
                 # Send data to bank b
-                response = requests.post(url, json=serialized_data, headers={'Authorization': f'Token {tokenB["token"]}',
+                response = requests.post(settings.EXTERNAL_BANK_URL, json=serialized_data, headers={'Authorization': f'Token {tokenB["token"]}',
                                                                        'Content-Type': 'application/json'})
                 if response.status_code == 401:
                     raise NotAuthenticatedAPI
 
                 print("RESPONSE from first request ", response)
-                #return view_transfer_data(request, transModel.pk)
+                return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
                     'title': 'Transfer Error',
@@ -298,6 +298,7 @@ def send_transfer_request(request):
 def view_transfer_data(request, pk):
     # Får fat i det object der blev lavet tidligere
     transModel = get_object_or_404(TransferModel, pk=pk)
+    print("transmodel: ", transModel)
     if request.method == 'GET':
         # instance=transModel er måden form ved hvilke object den arbejder med
         transfer_form = TransModelForm(instance=transModel)
@@ -307,8 +308,21 @@ def view_transfer_data(request, pk):
         print("im in post", request.POST)
         if transfer_form.is_valid():
             print("IT IS VALID")
-            # Eventuelt check forms.py for at se hvordan dette bliver håndteret. Har lavet en custom save()
             transfer_form.save()
+            authResponse = requests.post("http://localhost:8001/api-token-auth/",
+                                         data={"username": "dummy", "password": "adgangskode"})
+            tokenB = authResponse.json()
+            transfer_serializer = TransferModelSerializer(request.POST)
+            serialized_data = transfer_serializer.data
+            print("SERIALIZED DATA PUT", serialized_data)
+
+            response = requests.put(settings.EXTERNAL_BANK_URL, json=serialized_data,
+                                     headers={'Authorization': f'Token {tokenB["token"]}',
+                                              'Content-Type': 'application/json'})
+            print("RES: ", response)
+            if response.status_code == 201:
+                print("ENTERED PUT END")
+                return customer_dashboard(request)
             # This part should make a put requests to bank b with the transfer_form data
             # Bank B should then update the already existing TransferModel object.
             # It would be a good idead to first do get_object_or_404 in bank B to get the object
@@ -343,14 +357,26 @@ def receive_transfer(request):
                 print("transfer_object data is: ", transfer_object)
                 return Response("Transaction initialized", status=200)
             except:
+                # Look into changing this
                 raise Exception
         else:
-            return Response("Error with creation of transaction", status=409)
-        # Return the token as a response
-        return Response("Token from bank b", token)
+            return Response("Unable to validate serializer data", status=400)
     elif request.method == 'PUT':
-        pass
+        TransferSerializer = TransferModelSerializer(data=request.data)
+        if TransferSerializer.is_valid():
+            try:
+                deserialized_data = TransferSerializer.data
+                transfer_object = TransferModel(**deserialized_data)
+                if transfer_object.state == TransferModel.StateEnum.PENDING:
+                    transfer_object.save()
+                    return Response("Transaction updated", status=204)
+                elif transfer_object.state == TransferModel.StateEnum.CREATED:
+                    Transaction.transfer(transfer_object.amount, transfer_object.credit_account,
+                                         transfer_object.credit_description, transfer_object.debit_account,
+                                         transfer_object.debit_description)
+                    return Response("Transaction Completed", status=201)
+            except:
+                # Look into changing this
+                raise Exception
     else:
         return Response("error with reqeust method", status=405)
-
-
