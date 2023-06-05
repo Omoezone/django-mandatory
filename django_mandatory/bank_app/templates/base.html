@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'holiday.css' %}" media="screen" />
-    <link rel="stylesheet" type="text/css" href="{% static 'custom.css' %}" media="screen" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
 
     <title>KEA Bank</title>
@@ -13,10 +11,10 @@
 <body>
 
 
-<div class="container">
+<div>
     {% load l10n %}
 
-    <header style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 10px 30px ">
+    <header style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 10px 30px " class="container">
         <nav>
             <ul>
                 <li><a href="/"><strong>Kea Bank</strong></a></li>
@@ -56,7 +54,7 @@
     {% endblock main %}
     </main>
 
-    <footer class="container" style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 20px 30px; ">
+    <footer class="container" style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 20px 30px;">
         <p>&copy; The Kea Bank App</p>
     </footer>
 </div>

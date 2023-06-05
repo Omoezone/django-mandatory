@@ -10,40 +10,5 @@
     <p><strong>This user is a staff</strong></p>
     {% endif %}
 </article>
-<!-- HER KAN MAN I STEDET BRUGE USERFORM & CUSTOMERFORM (SE STAFF_NEW_CUSTOMER VIEW) -->
-<article>
-    <form>
-        <h2>Change Information</h2>
-        <!-- Grid -->
-        <div class="grid">
-
-            <!-- Markup example 1: input is inside label -->
-            <label for="firstname">
-                First name
-                <input type="text" id="firstname" name="firstname" placeholder="First name" value="{{ user.first_name }}">
-            </label>
-
-            <label for="lastname">
-                Last name
-                <input type="text" id="lastname" name="lastname" placeholder="Last name" value="{{ user.last_name }}">
-            </label>
-
-        </div>
-
-        <div class="grid">
-            <div class="input-item">
-                <label for="email">Email address</label>
-                <input type="email" id="email" name="email" placeholder="Email address"  value="{{ user.email }}">
-            </div>
-            <div class="input-item">
-                <label for="user_name">User name</label>
-                <input type="text" id="user_name" name="user_name" placeholder="User name" required>
-            </div>
-        </div>
-
-        <button type="submit">Save</button>
-
-    </form>
-</article>
 
 {% endblock main %}
