@@ -99,6 +99,38 @@ def staff_customer_details(request, pk):
 
 
 @login_required
+def staff_all_customers(request):
+    assert request.user.is_staff, 'Customer user routing staff view.'
+
+    customers =  Customer.objects.select_related('user').all()[:10]
+
+    context = {
+        'customers' : customers
+    }
+
+    return render(request, 'bank/all_customers.html', context)
+
+from django.db.models.functions import Lower
+@login_required
+def search_customers(request):
+    assert request.user.is_staff, 'Customer user routing staff view.'
+
+    search_query = request.GET.get('search_query')
+    
+    if not search_query:
+        search_query = ''
+
+    users = User.objects.filter(username__contains=search_query).filter(email__contains=search_query)
+
+    context = {
+        'users' : users,
+        'search_query' : search_query
+    }
+
+    return render(request, 'bank/search_customers.html', context)
+
+
+@login_required
 def staff_new_account_partial(request, user):
     assert request.user.is_staff, 'Customer user routing staff view.'
 

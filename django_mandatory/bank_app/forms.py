@@ -77,3 +77,7 @@ class TransModelForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+      
+class SearchCustomers(forms.Form):
+    search_query = forms.CharField(label="Search For Customer", max_length=40)

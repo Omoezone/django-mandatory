@@ -21,6 +21,8 @@ urlpatterns = [
     path('staff_new_account_partial/<int:user>/', views.staff_new_account_partial, name='staff_new_account_partial'),
     path('staff_account_list_partial/<int:pk>/', views.staff_account_list_partial, name='staff_account_list_partial'),
     path('staff_account_details/<int:pk>/', views.staff_account_details, name='staff_account_details'),
+    path('staff_all_customers/', views.staff_all_customers, name='staff_all_customers'),
+    path('search_customers/', views.search_customers, name='search_customers'),
 
     path('send_transfer_request/', views.send_transfer_request, name='send_transfer_request'),
     path('view_transfer_data/<int:pk>', views.view_transfer_data, name='view_transfer_data'),

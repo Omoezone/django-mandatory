@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block main %}
+
+<article>
+    <table>
+        <thead>
+            <tr>
+                <td>Username</td>
+                <td>Phone</td>
+                <td>Rank</td>
+                <td>Email</td>
+                <td>First Name</td>
+                <td>Last Name</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+                <tr>
+                    <td><a href="/staff_customer_details/{{customer.id}}">{{customer.user}}</a></td>
+                    <td>{{customer.phone}}</td>
+                    <td>{{customer.rank}}</td>
+                    <td><a href="mailto:{{customer.user.email}}">{{customer.user.email}}</a></td>
+                    <td>{{customer.user.first_name}}</td>
+                    <td>{{customer.user.last_name}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        
+    </table>
+</article>
+
+{% endblock main %}
