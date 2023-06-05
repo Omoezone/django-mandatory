@@ -121,7 +121,7 @@ def staff_all_customers(request):
 
     return render(request, 'bank/all_customers.html', context)
 
-from django.db.models.functions import Lower
+
 @login_required
 def search_customers(request):
     assert request.user.is_staff, 'Customer user routing staff view.'

@@ -7,7 +7,7 @@ class Command(BaseCommand):
     def handle(self, **options):
         print('Adding demo data ...')
 
-        bank_user = User.objects.create_user('bank', email='bank@mail.dk', password='adgangskode')
+        bank_user = User.objects.create_user('bank', email='bank@mail.dk', password='123')
         bank_user.is_active = False
         bank_user.save()
         ipo_account = Account.objects.create(user=bank_user, name='Bank IPO Account')
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             is_loan=True
         )
 
-        dummy_user = User.objects.create_user('dummy', email='dummy@dummy.com', password='adgangskode')
+        dummy_user = User.objects.create_user('dummy', email='dummy@dummy.com', password='123')
         dummy_user.first_name = 'Dummy'
         dummy_user.last_name = 'Dimwit'
         dummy_user.save()
@@ -50,7 +50,7 @@ class Command(BaseCommand):
             'Payout from bank'
         )
 
-        admin_user = User.objects.create_user('admin', email='admin@mail.dk', password='adgangskode')
+        admin_user = User.objects.create_user('admin', email='admin@mail.dk', password='123')
         admin_user.first_name = 'Admin'
         admin_user.last_name = 'user'
         admin_user.is_staff = True
