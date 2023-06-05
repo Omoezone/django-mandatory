@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
 import time
+from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.authtoken.models import Token
 from .serializers import TransferModelSerializer
@@ -58,6 +59,7 @@ def staff_new_customer(request):
                 )
                 print(f'********** Username: {username} -- Password: {password}')
                 Customer.objects.create(user=user, rank=rank, phone=phone)
+                send_welcome_email(user)
                 return staff_customer_details(request, user.pk)
             except IntegrityError:
                 context = {
@@ -73,6 +75,15 @@ def staff_new_customer(request):
         'customer_form': customer_form,
     }
     return render(request, 'bank/staff_new_customer.html', context)
+
+
+def send_welcome_email(user):
+    subject = f'Welcome to kea bank {user.username}'
+    message = 'Welcome to kea bank.\n\nThank you for joining.\nAn account has automaticly been made for you.' \
+              '\nRegards from KEA Bank'
+    from_email = 'KeaBank@Bank.dk'
+    to_email = [user.email]
+    return send_mail(subject, message, from_email, to_email, fail_silently=False)
 
 
 @login_required
