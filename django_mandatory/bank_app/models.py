@@ -104,19 +104,20 @@ class Transaction(models.Model):
         return f'{self.amount} : {self.transaction} : {self.date} : {self.account} : {self.description}'
 
 
-class ForeignTransfer(models.Model):
+class TransferModel(models.Model):
     class StateEnum(models.TextChoices):
-        PENDING = 'PENDING', 'PENDING'
-        COMPLETED = 'COMPLETED', 'COMPLETED'
-        DELETED = 'DELETED', 'DELETED'
+        INACTIVE = "INACTIVE"
+        PENDING = "PENDING"
+        CREATED = "CREATED"
 
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    d_account = models.ForeignKey(Account, related_name='foreign_debits', on_delete=models.PROTECT)
-    d_description = models.CharField(max_length=255)
-    c_account = models.ForeignKey(Account, related_name='foreign_credits', on_delete=models.PROTECT)
-    c_description = models.CharField(max_length=255)
-    idempotenceToken = models.CharField(max_length=15)
-    transferState = models.CharField(max_length=10, choices=StateEnum.choices)  # ENUM
+    debit_account = models.IntegerField()
+    debit_description = models.CharField(max_length=255)
+    credit_account = models.IntegerField()
+    credit_description = models.CharField(max_length=255)
+    idempotence = models.IntegerField()
+    state = models.CharField(max_length=15, choices=StateEnum.choices, default=StateEnum.INACTIVE)
 
-    #date = models.DateTimeField(auto_now_add=True, db_index=True)
-    #transaction = models.ForeignKey(UID, on_delete=models.PROTECT)
+    def __str__(self):
+        return f'{self.amount},{self.debit_account},{self.debit_description},{self.credit_account},' \
+               f'{self.credit_description}, {self.idempotence}, {self.state}'

@@ -3,6 +3,7 @@ from . import views
 from .api import UserList, UserDetail, RankList, RankDetail, AccountList, AccountDetail, CustomerList, CustomerDetail, \
     TransactionList, TransactionDetail
 from rest_framework.authtoken.views import obtain_auth_token
+
 app_name = "bank_app"
 
 urlpatterns = [
@@ -24,7 +25,7 @@ urlpatterns = [
     path('search_customers/', views.search_customers, name='search_customers'),
 
     path('send_transfer_request/', views.send_transfer_request, name='send_transfer_request'),
-    path('foreign_transfer_details/', views.foreign_transfer_details, name='foreign_transfer_details'),
+    path('view_transfer_data/<int:pk>', views.view_transfer_data, name='view_transfer_data'),
     path('api/receive_transfer/', views.receive_transfer, name='receive_transfer'),
     path('api-token-auth/', obtain_auth_token),
 

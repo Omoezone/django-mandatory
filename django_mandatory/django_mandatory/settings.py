@@ -166,6 +166,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 CUSTOMER_RANK_LOAN = 50
+EXTERNAL_BANK_URL = 'http://localhost:8001/api/receive_transfer/'
 
 # SMTP Email backend config
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

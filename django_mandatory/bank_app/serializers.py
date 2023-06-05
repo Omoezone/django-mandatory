@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Rank, Account, Customer, Transaction
+from .models import Rank, Account, Customer, Transaction, TransferModel
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -46,7 +46,20 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class b2bSerializer(serializers.Serializer):
-    amount = serializers.IntegerField(allow_null=False, required=True, min_value=0)
-    d_account = serializers.IntegerField(allow_null=False, required=True, min_value=0)
-    d_description = serializers.CharField(max_length=100)
+class IntegerField(serializers.Field):
+    def to_internal_value(self, data):
+        return int(data)
+
+    def to_representation(self, value):
+        return str(value)
+
+
+class TransferModelSerializer(serializers.ModelSerializer):
+    debit_account = IntegerField()
+    credit_account = IntegerField()
+
+    class Meta:
+        model = TransferModel
+        fields = ('amount', 'debit_account', 'debit_description', 'credit_account', 'credit_description',
+                  'idempotence', 'state')
+

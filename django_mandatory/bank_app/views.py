@@ -2,18 +2,20 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, reverse
-from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm
+from .forms import NewUserForm, CustomerForm, UserForm, NewAccountForm, TransferForm, TransModelForm
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
-from .models import Account, Customer, Transaction
+from .models import Account, Customer, Transaction, TransferModel
 from django.db import IntegrityError
 from secrets import token_urlsafe
-from .errors import InsufficientFunds
+from .errors import InsufficientFunds, NotAuthenticatedAPI, PostException, PutException, TransferError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 import requests
-from django.core.mail import send_mail
-from .serializers import b2bSerializer
+import time
+from django.conf import settings
+from rest_framework.authtoken.models import Token
+from .serializers import TransferModelSerializer
 
 
 @login_required
@@ -56,9 +58,6 @@ def staff_new_customer(request):
                 )
                 print(f'********** Username: {username} -- Password: {password}')
                 Customer.objects.create(user=user, rank=rank, phone=phone)
-                emailRes = send_welcome_email(user) #This works, but it needs proper allowance for outlook
-                print("Email sent: ", emailRes)
-                # Or proper setup of development SMTP server
                 return staff_customer_details(request, user.pk)
             except IntegrityError:
                 context = {
@@ -75,14 +74,6 @@ def staff_new_customer(request):
     }
     return render(request, 'bank/staff_new_customer.html', context)
 
-
-def send_welcome_email(user):
-    subject = f'Welcome to kea bank {user.username}'
-    message = 'Welcome to kea bank.\n\nThank you for joining.\nAn account has automaticly been made for you.' \
-              '\nRegards from KEA Bank'
-    from_email = 'KeaBank@Bank.dk'
-    to_email = [user.email]
-    return send_mail(subject, message, from_email, to_email, fail_silently=False)
 
 @login_required
 def staff_customer_details(request, pk):
@@ -164,7 +155,7 @@ def staff_account_list_partial(request, pk):
 
 @login_required
 def staff_account_details(request, pk):
-    assert request.user.is_staff, 'Customer user routing staff view.'
+    #assert request.user.is_staff, 'Customer user routing staff view.'
 
     account = get_object_or_404(Account, pk=pk)
     context = {
@@ -267,58 +258,42 @@ def make_loan(request):
 
 # --- Bank A ---
 def send_transfer_request(request):
-    # assert not data.user.is_staff, 'Staff user routing customer view.'
-    url = 'http://localhost:8001/api/receive_transfer/'
-    # Get data cleaned from frontend
+    assert not request.user.is_staff, 'Staff user routing customer view.'
     if request.method == 'POST':
-        reqData = request.POST
         form = TransferForm(request.POST)
         form.fields['debit_account'].queryset = request.user.customer.accounts
         if form.is_valid():
-            # Look into setting the reciever
-            amount = form.cleaned_data['amount']
-            debit_account = Account.objects.get(pk=form.cleaned_data['debit_account'].pk)
-            debit_description = form.cleaned_data['debit_description']
-            credit_account = Account.objects.get(pk=form.cleaned_data['credit_account'])
-            credit_description = form.cleaned_data['credit_description']
             try:
-                transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account,credit_description)
-                payload = {
-                    "amount": reqData.get("amount"),
-                    "d_account": reqData.get("debit_account"),
-                    "d_description": reqData.get("debit_description")
-                }
-                # User authentication'
-                credentials = {
-                    'username': 'dummy',
-                    'password': 'adgangskode'
-                }
-                tokenRes = requests.post('http://localhost:8001/api-token-auth/', data=credentials)
-                token = tokenRes.json().get("token")
-
-                # Send data to bank b
-                print("BEFORE REQUEST TO BANK B")
-                response = requests.post(url, json=payload,
-                                         headers={
-                                            'Authorization': f'Token {token}',
-                                            'Content-Type': 'application/json'})
-                print("RESPONSE from forst request ", response)
-                # Receive token from bank b
-
-                return transaction_details(request, transfer)
+                # midlertidig object der bliver brugt til kommunikation mellem bank a og bank B
+                transModel = TransferModel.objects.create(
+                    amount=request.POST.get("amount"),
+                    debit_account=int(request.POST.get("debit_account")),
+                    debit_description=request.POST.get("debit_description"),
+                    credit_account=int(request.POST.get("credit_account")),
+                    credit_description=request.POST.get("credit_description"),
+                    idempotence=int(time.time()),
+                )
+                # This one is used if the external transfer is tested locally
+                #user = User.objects.get(pk=request.user.pk)
+                #token, created = Token.objects.get_or_create(user=user)
+                # User authentication
+                authResponse = requests.post("http://localhost:8001/api-token-auth/",
+                                       data={"username": "dummy", "password": "adgangskode"})
+                tokenB = authResponse.json()
+                transfer_serializer = TransferModelSerializer(transModel)
+                serialized_data = transfer_serializer.data
+                # Start transaction/communication with bank b
+                response = requests.post(settings.EXTERNAL_BANK_URL, json=serialized_data, headers={'Authorization': f'Token {tokenB["token"]}',
+                                                                       'Content-Type': 'application/json'})
+                if response.status_code == 401:
+                    raise NotAuthenticatedAPI
+                return view_transfer_data(request, transModel.pk)
             except InsufficientFunds:
                 context = {
                     'title': 'Transfer Error',
                     'error': 'Insufficient funds for transfer.'
                 }
                 return render(request, 'bank/error.html', context)
-        # Temp error handling
-        else:
-            context = {
-                'title': 'Form Error',
-                'error': 'Unable to clean the formdata, please try again'
-            }
-            return render(request, 'bank/error.html', context)
     else:
         form = TransferForm()
         form.fields['debit_account'].queryset = request.user.customer.accounts
@@ -328,39 +303,110 @@ def send_transfer_request(request):
     return render(request, 'bank/send_transfer_request.html', context)
 
 
-# --- Bank B ---
-@api_view(['POST'])
-def receive_transfer(request):
-    # Get data from bank a
-    if request.method == 'POST':
-        TransferSerializer = b2bSerializer(data=request.data)
-        if TransferSerializer.is_valid():
-            deserialized_data = TransferSerializer.data
-
-            # Access individual field values
-            amount = deserialized_data['amount']
-            c_account = Account.objects.get(pk=3)  # Here we ask to always get id 3, as that is the bank: incoming transfer account
-            c_description = f"Money Recieved from external ID: {deserialized_data['d_account']}"
-            d_account = Account.objects.get(pk=deserialized_data['d_account'])
-            d_description = deserialized_data['d_description']
-
-
-
-            # Process the transfer and create the transfer object
-            transfer = Transaction.transfer(amount, c_account, c_description, d_account, d_description)
-            print("made transfer in bank b", transfer)
-
-            # Clear the session data
-
-            return Response("Transaction completed", status=201)
-        else:
-            return Response("Error with creation of transaction", status=409)
-        # Return the token as a response
-        return Response("Token from bank b", token)
+@login_required()
+def view_transfer_data(request, pk):
+    transModel = get_object_or_404(TransferModel, pk=pk)
+    if request.method == 'GET':
+        transfer_form = TransModelForm(instance=transModel)
+    elif request.method == 'POST':
+        transfer_form = TransModelForm(request.POST, instance=transModel)
+        if transfer_form.is_valid():
+            try:
+                print("IT IS VALID")
+                transfer_form.save()
+                # This is used to get the API key for bank B
+                authResponse = requests.post("http://localhost:8001/api-token-auth/",
+                                             data={"username": "dummy", "password": "adgangskode"})
+                tokenB = authResponse.json()
+                transfer_serializer = TransferModelSerializer(transModel)
+                serialized_data = transfer_serializer.data
+                response = requests.put(settings.EXTERNAL_BANK_URL, json=serialized_data,
+                                         headers={'Authorization': f'Token {tokenB["token"]}',
+                                                  'Content-Type': 'application/json'})
+                if response.status_code == 201:
+                    # End of transaction / communication
+                    amount = transModel.amount
+                    debit_account = Account.objects.get(pk=transModel.debit_account)
+                    debit_description = transModel.debit_description
+                    credit_account = Account.objects.get(pk=4)
+                    credit_description = transModel.credit_description
+                    transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account,
+                                                    credit_description)
+                    print(transfer)
+                    # Cleanup, as it is not needed anymore
+                    transModel.delete()
+                    return customer_dashboard(request)
+            except TransferError:
+                transModel.delete()
+                context = {
+                    'title': 'Transfer Error',
+                    'error': 'Problem happened when validating data.'
+                }
+                return render(request, 'bank/error.html', context)
     else:
-        return Response("not post", status=405)
+        transfer_form = TransModelForm(instance=transModel)
+    context = {
+        "transModel": transModel,
+        "transfer_form": transfer_form,
+    }
+    return render(request, 'bank/view_transfer_data.html', context)
 
+# --- Bank B ---
+@api_view(['POST', 'PUT'])
+def receive_transfer(request):
+    # Post is the first part, where the placeholder object is first created for bank b
+    if request.method == 'POST':
+        TransferSerializer = TransferModelSerializer(data=request.data)
+        if TransferSerializer.is_valid():
+            try:
+                deserialized_data = TransferSerializer.data
+                transfer_object = TransferModel(**deserialized_data)
+                transfer_object.state = TransferModel.StateEnum.PENDING
+                transfer_object.save()
+                print("transfer_object data is: ", transfer_object)
+                return Response("Transaction initialized", status=200)
+            except:
+                # No reason to render error page, as this is only via HTTP/API
+                transfer_object.delete()
+                raise PostException
+        else:
+            return Response("Unable to validate serializer data", status=400)
+    elif request.method == 'PUT':
+        TransferSerializer = TransferModelSerializer(data=request.data)
+        if TransferSerializer.is_valid():
+            try:
+                deserialized_data = TransferSerializer.data
+                print("DESERIALISED DATA: ", deserialized_data)
+                transfer_object = get_object_or_404(TransferModel, idempotence=deserialized_data["idempotence"])
+                print("Transfer_object in Bank B", transfer_object)
+                if deserialized_data.get("state") == TransferModel.StateEnum.PENDING.value:
+                    print("PENDING PUT")
+                    transfer_object.amount = deserialized_data["amount"]
+                    transfer_object.debit_account = deserialized_data["debit_account"]
+                    transfer_object.debit_description = deserialized_data["debit_description"]
+                    transfer_object.credit_account = deserialized_data["credit_account"]
+                    transfer_object.credit_description = deserialized_data["credit_description"]
+                    transfer_object.state = deserialized_data["state"]
+                    transfer_object.save()
+                    return Response("Transaction updated", status=204)
+                elif deserialized_data.get("state") == TransferModel.StateEnum.CREATED.value:
+                    print("ENTERED CREATED STATE")
+                    amount = Decimal(deserialized_data.get("amount"))
+                    debit_account = Account.objects.get(pk=3)
+                    debit_description = deserialized_data.get("debit_description")
+                    credit_account = Account.objects.get(pk=int(deserialized_data.get("debit_account")))
+                    credit_description = deserialized_data.get("credit_description")
+                    print(amount, debit_account, debit_description, credit_account, credit_description)
+                    print(type(amount), type(debit_account), type(debit_description), type(credit_account), type(credit_description))
 
-@login_required
-def foreign_transfer_details(request, pk):
-    pass
+                    transaction_transfer = Transaction.transfer(amount, debit_account, debit_description, credit_account, credit_description)
+                    print("TRANSACTION BANK B", transaction_transfer)
+                    transfer_object.state = TransferModel.StateEnum.CREATED
+                    transfer_object.save()
+                    return Response("Transaction Completed", status=201)
+            except:
+                # No reason to render error page, as this is only via HTTP/API
+                transfer_object.delete()
+                raise PutException
+    else:
+        return Response("error with reqeust method", status=405)
