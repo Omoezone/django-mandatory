@@ -30,7 +30,7 @@
                 {% if user.is_staff %}
                 <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
                 <li><a href="{% url 'bank_app:staff_new_customer' %}">Create New Customer</a></li>
-                <li><a href="{% url 'bank_app:staff_all_customers' %}">All users</a></li>
+                <li><a href="{% url 'bank_app:staff_all_customers' %}">All Users</a></li>
                 <li><a href="{% url 'bank_app:search_customers' %}">Search</a></li>
                 {% endif %}
                 <li><a href="{% url 'two_factor:profile' %}">Multifactor Authentication</a></li>
