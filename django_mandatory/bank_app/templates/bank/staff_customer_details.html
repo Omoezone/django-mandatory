@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block main %}
-
+<article>
 <h3>Customer Details</h3>
 
 <form action="{% url 'bank_app:staff_customer_details' customer.pk %}" method="post">
@@ -27,7 +27,9 @@
         hx-trigger="load">
     </tbody>
 </table>
+</article>
 
+<article>
 <h3>Create New Account</h3>
 <form action="{% url 'bank_app:staff_new_account_partial' customer.user.pk %}" method="post">
     {% csrf_token %}
@@ -36,5 +38,5 @@
     <button>Create Account</button>
     </fieldset>
 </form>
-
+</article>
 {% endblock main %}

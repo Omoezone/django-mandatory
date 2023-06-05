@@ -2,15 +2,17 @@
 
 {% block main %}
 
-<h3>Transfer Details</h3>
+<article>
+    <h3>Transfer Details</h3>
 
-<form action="{% url 'bank_app:view_transfer_data' pk=transModel.pk %}" method="post">
-    {% csrf_token %}
-    <fieldset>
-        {{ transfer_form }}
-    <button>Update Transfer</button>
-    </fieldset>
-</form>
+    <form action="{% url 'bank_app:view_transfer_data' pk=transModel.pk %}" method="post">
+        {% csrf_token %}
+        <fieldset>
+            {{ transfer_form }}
+        <button>Update Transfer</button>
+        </fieldset>
+    </form>
+</article>
 <!-- This one can be used to send patch instead
 <form><button>Completede transfer</button></form>
  -->

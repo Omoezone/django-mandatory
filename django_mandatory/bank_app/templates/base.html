@@ -14,7 +14,7 @@
 <div>
     {% load l10n %}
 
-    <header style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 10px 30px " class="container">
+    <header style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; background: #fff; padding: 10px 30px " class="container">
         <nav>
             <ul>
                 <li><a href="/"><strong>Kea Bank</strong></a></li>
@@ -30,7 +30,7 @@
                 {% if user.is_staff %}
                 <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
                 <li><a href="{% url 'bank_app:staff_new_customer' %}">Create New Customer</a></li>
-                <li><a href="{% url 'bank_app:staff_all_customers' %}">All customers</a></li>
+                <li><a href="{% url 'bank_app:staff_all_customers' %}">All users</a></li>
                 <li><a href="{% url 'bank_app:search_customers' %}">Search</a></li>
                 {% endif %}
                 <li><a href="{% url 'two_factor:profile' %}">Multifactor Authentication</a></li>
@@ -54,7 +54,7 @@
     {% endblock main %}
     </main>
 
-    <footer class="container" style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 20px 30px;">
+    <footer class="container" style="box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; padding: 20px 30px; background-color: white;">
         <p>&copy; The Kea Bank App</p>
     </footer>
 </div>

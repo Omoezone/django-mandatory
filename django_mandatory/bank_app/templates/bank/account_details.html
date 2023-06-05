@@ -2,12 +2,15 @@
 
 {% block main %}
 
-{% if user.is_staff %}
-<p>Welcome, {{ user.username }}.</p>
-{% else %}
-<p>Welcome, {{ user.customer.full_name }}.</p>
-{% endif %}
+
 <article>
+
+    {% if user.is_staff %}
+    <p>Welcome, {{ user.username }}.</p>
+    {% else %}
+    <p>Welcome, {{ user.customer.full_name }}.</p>
+    {% endif %}
+
     <p><Strong>Date Joined: </Strong>{{user.date_joined}}</p>
 
     {% if user.is_staff %}
