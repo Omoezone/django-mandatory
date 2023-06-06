@@ -289,7 +289,7 @@ def send_transfer_request(request):
                 #token, created = Token.objects.get_or_create(user=user)
                 # User authentication
                 authResponse = requests.post("http://localhost:8001/api-token-auth/",
-                                       data={"username": "dummy", "password": "adgangskode"})
+                                       data={"username": "dummy", "password": "123"})
                 tokenB = authResponse.json()
                 transfer_serializer = TransferModelSerializer(transModel)
                 serialized_data = transfer_serializer.data
