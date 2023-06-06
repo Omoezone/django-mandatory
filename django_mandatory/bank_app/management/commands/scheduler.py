@@ -25,7 +25,7 @@ class Command(BaseCommand):
 
 
     def schedule_update_rank(self):
-        interval = 1
+        interval = 5
         schedule.every(interval).seconds.do(self.update_rank)
         #schedule.every(interval).months.do(self.update_rank)
         while True:
